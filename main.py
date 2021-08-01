@@ -1,14 +1,13 @@
 import pygame
 import math
 from queue import PriorityQueue
-
-from pygame.constants import CONTROLLER_AXIS_LEFTX, KEYDOWN
 from Node import Node
 
 
 size = 1000
 rows = 50
 WINDOW = pygame.display.set_mode((size, size))
+pygame.display.set_caption("A* Search Algorithm")
 
 
 def make_grid(size, rows) -> list[Node]:
@@ -51,8 +50,31 @@ def handle_wall(pos, grid):
     node.make_wall()
 
 
-def a_star(grid, start, end, window, rows, size):
+def reconstruct_path(came_from, current, draw_nodes):
+    while current in came_from:
+        current = came_from[current]
+        current.make_path()
+        draw_nodes()
+
+
+def a_star(grid, start, end, draw_nodes):
     open = PriorityQueue()
+    # put as tuples, holding f_score and node
+    open.put((0, start))
+
+    # set of nodes in open to test for membership
+    open_hash_set = {start}
+
+    # map to hold previous nodes
+    came_from = {}
+
+    # map to hold g_scores, default to infinityfor all nodes except for start at 0
+    g_scores = {node: float("inf") for row in grid for node in row}
+    g_scores[start] = 0
+
+    # map to hold f_scores, default to infinity for all nodes except for start at h()
+    f_scores = {node: float("inf") for row in grid for node in row}
+    f_scores[start] = euclidean_dist(start, end)
 
     while not open.empty():
         # handle close event
@@ -60,7 +82,49 @@ def a_star(grid, start, end, window, rows, size):
             if event.type == pygame.QUIT:
                 pygame.quit()
 
-        draw_nodes(window, grid, rows, size)
+        # get node from priorirty queue with lowers f score, and remove from set
+        current = open.get()[1]
+        open_hash_set.remove(current)
+
+        # if we have reached  end, we are done
+        if end == current:
+            reconstruct_path(came_from, current, draw_nodes)
+            end.make_end()
+            start.make_start()
+            return True
+
+        # go through each neighbor
+        for neighbor in current.get_neighbors():
+            # get g_score of curr node
+            temp_g_score = g_scores[current] + \
+                euclidean_dist(current, neighbor)
+
+            # if neighbor is further from start
+            if temp_g_score < g_scores[neighbor]:
+                # this path is better than before, save to came_from and scores lists
+                came_from[neighbor] = current
+                g_scores[neighbor] = temp_g_score
+                f_scores[neighbor] = temp_g_score + \
+                    euclidean_dist(neighbor, end)
+                # add neigjbor and f_score to open set
+                if neighbor not in open_hash_set:
+                    open.put((f_scores[neighbor], neighbor))
+                    open_hash_set.add(neighbor)
+                    neighbor.make_open()
+
+        # close node fter done, if not start
+        if current != start:
+            current.make_closed()
+        draw_nodes()
+
+    return False
+
+
+def euclidean_dist(node1, node2):
+    x1, y1 = node1.get_position()
+    x2, y2 = node2.get_position()
+
+    return math.sqrt(abs(x2 - x1) + abs(y2 - y1))
 
 
 def main(window, size, rows):
@@ -105,10 +169,24 @@ def main(window, size, rows):
                     handle_wall(pos, grid)
                 draw_nodes(window, grid, rows, size)
             elif event.type == pygame.KEYDOWN:  # any key pressed
-                print("adadad")
-                a_star(grid, start, end, window, rows, size)
+
+                if event.key == pygame.K_SPACE and start and end:
+
+                    # update all neighbors
+                    for row in grid:
+                        for node in row:
+                            node.update_neighbors(grid)
+                    a_star(grid, start, end, lambda: draw_nodes(
+                        window, grid, rows, size))
+
+                # if any key but space is clicked, restart board
+                else:
+                    start = None
+                    end = None
+                    grid = make_grid(size, rows)
         draw_nodes(window, grid, rows, size)
     pygame.quit()
 
 
-main(WINDOW, size, rows)
+if __name__ == "__main__":
+    main(WINDOW, size, rows)
