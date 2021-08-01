@@ -95,17 +95,17 @@ class Node:
 
         # add bottom left neighbor
         if(self.col > 0 and self.row < self.num_rows - 1
-                and not grid[self.row + 1][self.col - 1]):
+                and not grid[self.row + 1][self.col - 1].is_wall()):
             self.neighbors.append(grid[self.row + 1][self.col - 1])
 
         # add top right neighbor
         if (self.col < self.num_rows - 1 and self.row > 0
-                and not grid[self.row - 1][self.col - 1].is_wall()):
+                and not grid[self.row - 1][self.col + 1].is_wall()):
             self.neighbors.append(grid[self.row - 1][self.col + 1])
 
         # add top left neighbor
         if(self.col > 0 and self.row > 0
-                and not grid[self.row - 1][self.col - 1]):
+                and not grid[self.row - 1][self.col - 1].is_wall()):
             self.neighbors.append(grid[self.row - 1][self.col - 1])
 
     # func for priority queue to compare nodes
